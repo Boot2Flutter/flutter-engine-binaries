@@ -1,0 +1,128 @@
+diff --git a/fml/BUILD.gn b/fml/BUILD.gn
+index 9eaccd086..d9709f74a 100644
+--- a/fml/BUILD.gn
++++ b/fml/BUILD.gn
+@@ -141,17 +141,25 @@ source_set("fml") {
+   }
+ 
+   if (is_android) {
++    # build for flutter-embedder-ndk,remove jni sources
++
++    # sources += [
++    #   "platform/android/jni_util.cc",
++    #   "platform/android/jni_util.h",
++    #   "platform/android/jni_weak_ref.cc",
++    #   "platform/android/jni_weak_ref.h",
++    #   "platform/android/message_loop_android.cc",
++    #   "platform/android/message_loop_android.h",
++    #   "platform/android/paths_android.cc",
++    #   "platform/android/paths_android.h",
++    #   "platform/android/scoped_java_ref.cc",
++    #   "platform/android/scoped_java_ref.h",
++    # ]
++
+     sources += [
+-      "platform/android/jni_util.cc",
+-      "platform/android/jni_util.h",
+-      "platform/android/jni_weak_ref.cc",
+-      "platform/android/jni_weak_ref.h",
+       "platform/android/message_loop_android.cc",
+       "platform/android/message_loop_android.h",
+-      "platform/android/paths_android.cc",
+-      "platform/android/paths_android.h",
+-      "platform/android/scoped_java_ref.cc",
+-      "platform/android/scoped_java_ref.h",
++      "platform/linux/paths_linux.cc",
+     ]
+ 
+     libs += [ "android" ]
+diff --git a/shell/common/switches.cc b/shell/common/switches.cc
+index b5a15b1e1..50c2d0d04 100644
+--- a/shell/common/switches.cc
++++ b/shell/common/switches.cc
+@@ -80,14 +80,14 @@ static const std::string gAllowedDartFlags[] = {
+ // Android.  This is a workaround for crashes seen when doing dynamic lookups
+ // of the engine's own symbols on some older versions of Android.
+ #if OS_ANDROID
+-extern uint8_t _binary_icudtl_dat_start[];
+-extern uint8_t _binary_icudtl_dat_end[];
+-
+-static std::unique_ptr<fml::Mapping> GetICUStaticMapping() {
+-  return std::make_unique<fml::NonOwnedMapping>(
+-      _binary_icudtl_dat_start,
+-      _binary_icudtl_dat_end - _binary_icudtl_dat_start);
+-}
++// extern uint8_t _binary_icudtl_dat_start[];
++// extern uint8_t _binary_icudtl_dat_end[];
++
++// static std::unique_ptr<fml::Mapping> GetICUStaticMapping() {
++//   return std::make_unique<fml::NonOwnedMapping>(
++//       _binary_icudtl_dat_start,
++//       _binary_icudtl_dat_end - _binary_icudtl_dat_start);
++// }
+ #endif
+ 
+ namespace flutter {
+@@ -365,13 +365,13 @@ Settings SettingsFromCommandLine(const fml::CommandLine& command_line) {
+       command_line.GetOptionValue(FlagForSwitch(Switch::ICUNativeLibPath),
+                                   &native_lib_path);
+ 
+-#if OS_ANDROID
+-      settings.icu_mapper = GetICUStaticMapping;
+-#else
++// #if OS_ANDROID
++//       settings.icu_mapper = GetICUStaticMapping;
++// #else
+       settings.icu_mapper = [icu_symbol_prefix, native_lib_path] {
+         return GetSymbolMapping(icu_symbol_prefix, native_lib_path);
+       };
+-#endif
++// #endif
+     }
+   }
+ 
+diff --git a/shell/platform/BUILD.gn b/shell/platform/BUILD.gn
+index 66baf0e88..cfee7481c 100644
+--- a/shell/platform/BUILD.gn
++++ b/shell/platform/BUILD.gn
+@@ -9,7 +9,8 @@ group("platform") {
+   if (is_mac || is_ios) {
+     deps = [ "darwin" ]
+   } else if (is_android) {
+-    deps = [ "android" ]
++    #deps = [ "android" ]
++    deps = [ "//flutter/shell/platform/embedder:embedder_ndk_library" ]
+   } else if (is_linux) {
+     deps = []
+     if (enable_desktop_embeddings) {
+diff --git a/shell/platform/embedder/BUILD.gn b/shell/platform/embedder/BUILD.gn
+index 484aba2c6..a12f23508 100644
+--- a/shell/platform/embedder/BUILD.gn
++++ b/shell/platform/embedder/BUILD.gn
+@@ -117,6 +117,26 @@ embedder_source_set("embedder") {
+   public_configs = []
+ }
+ 
++# build for flutter-embedder-ndk
++config("embedder_ndk_library_config") {
++  defines = [
++    # Use prefixed symbols to avoid collisions with higher level API.
++    "FLUTTER_API_SYMBOL_PREFIX=Embedder",
++  ]
++}
++
++embedder_source_set("embedder_ndk_source_set") {
++  public_configs = [ ":embedder_ndk_library_config" ]
++}
++
++shared_library("embedder_ndk_library") {
++  output_name = "flutter_ndk"
++  deps = [
++    ":embedder_ndk_source_set",
++  ]
++}
++# end flutter-embedder-ndk
++
+ embedder_source_set("embedder_as_internal_library") {
+   public_configs = [ ":embedder_internal_library_config" ]
+ }

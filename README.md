@@ -3,7 +3,7 @@ flutter engine embedder binaries built by android ndk toolchain.
 
 # flutter-engine-version
 build from flutter 2.2.1 stable
-engine commit id :a9d88a4d182bdae23e3a4989abfb7ea25954aad1
+engine commit id :0fdb562ac8068ce3dda6b69aca3f355f4d1d2718
 
 # How to build flutter engine by ndk
 1. follow flutter engine build offical guide :(https://github.com/flutter/flutter/wiki/Compiling-the-engine)
